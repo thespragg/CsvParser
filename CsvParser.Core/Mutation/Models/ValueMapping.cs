@@ -6,17 +6,20 @@ public class ValueMapping
     public string[] InputColumns { get; }
     public string OutputColumn { get; }
     public string SearchValue { get; }
-    public string Replacement { get; }
+    public string? Replacement { get; }
     public bool CaseSensitive { get; }
     public bool Contains { get; }
-
+    public string Template { get; }
+    public string? ReplacementCol { get; }
     public ValueMapping(
         string[] inputColumns,
         string searchValue,
-        string replacement,
+        string? replacement,
+        string? replacementCol,
         string outputColumn,
         bool caseSensitive,
-        bool contains
+        bool contains,
+        string template = "@${value}"
     )
     {
         SearchValue = searchValue;
@@ -25,8 +28,10 @@ public class ValueMapping
         InputColumns = inputColumns;
         CaseSensitive = caseSensitive;
         Contains = contains;
+        ReplacementCol = replacementCol;
+        Template = template;
     }
-
+    
     public string? GetValue(IReadOnlyDictionary<string, string?> row)
     {
         var comparisonType = !CaseSensitive ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
@@ -40,8 +45,13 @@ public class ValueMapping
             var doesContain = value.Contains(SearchValue, comparisonType);
             var isEqual = value.Equals(SearchValue, comparisonType);
 
-            if (Contains ? doesContain : isEqual)
-                return Replacement;
+            if (Contains ? !doesContain : !isEqual) continue;
+            
+            if (Replacement is not null) return Replacement;
+            if (ReplacementCol is null) throw new Exception("A replacement value or column must be specified.");
+            var success = row.TryGetValue(ReplacementCol ?? "", out var val);
+            if (!success) throw new Exception("Failed to find replacement column");
+            return StringFactory.Format(val, Template);
         }
 
         return null;

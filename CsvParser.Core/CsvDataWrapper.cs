@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Text;
 using CsvParser.Core.Utils;
 
 namespace CsvParser.Core;
@@ -12,6 +13,31 @@ public class CsvDataWrapper : IEnumerable<Dictionary<string, string?>>
     {
         _data = data;
         _columnNames = columnNames;
+    }
+
+    public override string ToString()
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine(string.Join(",", _columnNames));
+
+        foreach (var row in _data)
+        {
+            var values = new List<string>();
+            foreach (var columnName in _columnNames)
+            {
+                if (row.TryGetValue(columnName, out var value))
+                {
+                    values.Add(value ?? "");
+                }
+                else
+                {
+                    values.Add("");
+                }
+            }
+            sb.AppendLine(string.Join(",", values));
+        }
+
+        return sb.ToString();
     }
 
     public static CsvDataWrapper FromFile(string filePath)

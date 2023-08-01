@@ -9,7 +9,7 @@ public class CsvPipeline
     private readonly List<string> _newColumnNames;
     private readonly List<ColumnMapping> _columnMappings;
     private readonly List<ValueMapping> _valueMappings;
-    
+
     [JsonPropertyName("ColumnMappings")] public IEnumerable<ColumnMapping> ColumnMappings => _columnMappings;
     [JsonPropertyName("ValueMappings")] public IEnumerable<ValueMapping> ValueMappings => _valueMappings;
 
@@ -20,14 +20,15 @@ public class CsvPipeline
         _valueMappings = new List<ValueMapping>();
     }
 
-    public static CsvPipeline FromColumns(List<string> newColumnNames)
-        => new(newColumnNames);
+    public static CsvPipeline FromColumns(params string[] newColumnNames)
+        => new(newColumnNames.ToList());
 
     public CsvPipeline MapColumn(
         string sourceColumn,
         string targetColumn,
         bool required = false,
-        bool manual = false
+        bool manual = false,
+        string template = "${value}"
     )
     {
         if (_columnMappings.Any(x => x.TargetColumn == targetColumn))
@@ -35,7 +36,7 @@ public class CsvPipeline
             throw new ArgumentException($"Target column '{targetColumn}' already exists.");
         }
 
-        _columnMappings.Add(new ColumnMapping(sourceColumn, targetColumn, required, manual));
+        _columnMappings.Add(new ColumnMapping(sourceColumn, targetColumn, required, manual, template));
         return this;
     }
 
@@ -43,17 +44,25 @@ public class CsvPipeline
         string[] inputColumns,
         string outputColumn,
         string searchValue,
-        string replacementValue,
+        string? replacementValue = null,
+        string? replacementCol = null,
         bool caseSensitive = true,
-        bool contains = false
+        bool contains = false,
+        string template = "${value}"
     )
     {
-        var mapping = new ValueMapping(inputColumns, searchValue, replacementValue, outputColumn, caseSensitive, contains);
+        var mapping = new ValueMapping(inputColumns, searchValue, replacementValue, replacementCol, outputColumn,
+            caseSensitive, contains, template);
 
-        if (mapping.InputColumns.Length == 0 || string.IsNullOrEmpty(mapping.Replacement) ||
+        if (mapping.InputColumns.Length == 0 ||
             string.IsNullOrEmpty(mapping.OutputColumn))
         {
-            throw new ArgumentException("Replacement, Input Columns and Output Column are all required.");
+            throw new ArgumentException("Input Columns and Output Column are all required.");
+        }
+
+        if (mapping.Replacement is null && mapping.ReplacementCol is null)
+        {
+            throw new ArgumentException("A replacement column or replacement value must be specified.");
         }
 
         _valueMappings.Add(mapping);

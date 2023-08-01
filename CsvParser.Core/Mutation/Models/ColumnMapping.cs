@@ -8,17 +8,20 @@ public class ColumnMapping
     public bool Required { get; }
     private readonly Dictionary<string, string?> _lastValues;
     private bool Manual { get; }
+    private string Template { get; }
 
     public ColumnMapping(
         string sourceColumn,
         string targetColumn,
         bool required = false,
-        bool manual = false)
+        bool manual = false,
+        string template = "${value}")
     {
         SourceColumn = sourceColumn;
         TargetColumn = targetColumn;
         Required = required;
         Manual = manual;
+        Template = template;
         _lastValues = new Dictionary<string, string?>();
     }
 
@@ -28,8 +31,8 @@ public class ColumnMapping
         if (!success) throw new Exception("Failed to map row.");
 
         var originalColumn = colVal;
-        if (!Required) return colVal;
-        if (!string.IsNullOrEmpty(colVal) && !Manual) return colVal;
+        if (!Required) return StringFactory.Format(colVal, Template!);
+        if (!string.IsNullOrEmpty(colVal) && !Manual) return StringFactory.Format(colVal, Template!);
 
         Console.WriteLine("A value must be provided for this column.");
         Console.WriteLine(
