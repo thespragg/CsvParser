@@ -6,19 +6,21 @@ namespace CsvParser.Core.Mutation;
 
 public class CsvPipeline
 {
-    private readonly List<string> _newColumnNames;
-    private readonly List<ColumnMapping> _columnMappings;
-    private readonly List<ValueMapping> _valueMappings;
+    private readonly CsvMappingSettings _settings;
 
-    [JsonPropertyName("ColumnMappings")] public IEnumerable<ColumnMapping> ColumnMappings => _columnMappings;
-    [JsonPropertyName("ValueMappings")] public IEnumerable<ValueMapping> ValueMappings => _valueMappings;
+    [JsonPropertyName("ColumnMappings")] public IEnumerable<ColumnMapping> ColumnMappings => _settings.ColumnMappings;
+    [JsonPropertyName("ValueMappings")] public IEnumerable<ValueMapping> ValueMappings => _settings.ValueMappings;
 
     private CsvPipeline(List<string> newColumnNames)
-    {
-        _newColumnNames = newColumnNames;
-        _columnMappings = new List<ColumnMapping>();
-        _valueMappings = new List<ValueMapping>();
-    }
+        => _settings = new CsvMappingSettings
+        {
+            NewColumnNames = newColumnNames
+        };
+
+    private CsvPipeline(CsvMappingSettings settings)
+        => _settings = settings;
+
+    public static CsvPipeline FromSettings(CsvMappingSettings settings) => new(settings);
 
     public static CsvPipeline FromColumns(params string[] newColumnNames)
         => new(newColumnNames.ToList());
@@ -31,12 +33,12 @@ public class CsvPipeline
         string template = "${value}"
     )
     {
-        if (_columnMappings.Any(x => x.TargetColumn == targetColumn))
+        if (_settings.ColumnMappings.Any(x => x.TargetColumn == targetColumn))
         {
             throw new ArgumentException($"Target column '{targetColumn}' already exists.");
         }
 
-        _columnMappings.Add(new ColumnMapping(sourceColumn, targetColumn, required, manual, template));
+        _settings.ColumnMappings.Add(new ColumnMapping(sourceColumn, targetColumn, required, manual, template));
         return this;
     }
 
@@ -65,7 +67,7 @@ public class CsvPipeline
             throw new ArgumentException("A replacement column or replacement value must be specified.");
         }
 
-        _valueMappings.Add(mapping);
+        _settings.ValueMappings.Add(mapping);
         return this;
     }
 
@@ -76,12 +78,12 @@ public class CsvPipeline
         foreach (var row in sourceData)
         {
             var newRow = new Dictionary<string, string?>();
-            foreach (var mapping in _columnMappings)
+            foreach (var mapping in _settings.ColumnMappings)
             {
                 newRow[mapping.TargetColumn] = mapping.GetValue(row);
             }
 
-            foreach (var mapping in _valueMappings)
+            foreach (var mapping in _settings.ValueMappings)
             {
                 var val = mapping.GetValue(row);
                 if (val == null) continue;
@@ -91,7 +93,7 @@ public class CsvPipeline
             newData.Add(newRow);
         }
 
-        return new CsvDataWrapper(newData, new List<string>(_newColumnNames));
+        return new CsvDataWrapper(newData, new List<string>(_settings.NewColumnNames));
     }
 
     public void Save(string path)

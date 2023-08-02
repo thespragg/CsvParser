@@ -5,7 +5,7 @@ namespace CsvParser.Test.Mutation;
 
 public class CsvPipelineTests
 {
-    private static readonly string[] InputColumns = new[] { "in1", "in2" };
+    private static readonly string[] InputColumns = { "in1", "in2" };
 
     [Fact]
     public void CsvPipeline_ReturnsExpected()
