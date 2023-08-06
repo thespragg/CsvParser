@@ -14,8 +14,6 @@ public class CsvController : ControllerBase
     [HttpPost]
     public IActionResult Map(MapDto mapSettings)
     {
-        var str = "{\"SourceColumn\": \"Date\",\"TargetColumn\": \"Date\",\"Required\": true}";
-        var x = JsonSerializer.Deserialize<ColumnMapping>(str);
         var pipeline = CsvPipeline.FromSettings(mapSettings.Settings);
         var data = CsvDataWrapper.FromFile(mapSettings.FilePath);
         var res = pipeline.Run(data);
